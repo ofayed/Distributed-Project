@@ -1,0 +1,150 @@
+
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[0].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover.jpg",
+        "received_image.jpg",
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[1].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover.jpg",
+        "received_image.jpg",
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[2].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover.jpg",
+        "received_image.jpg",
+    ).await?;
+
+
+
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[0].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover1.jpg",
+        "received_image1.jpg",
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[1].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover1.jpg",
+        "received_image1.jpg",
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[2].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover1.jpg",
+        "received_image1.jpg",
+    ).await?;
+
+
+
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[0].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover2.jpg",
+        "received_image2.jpg",
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[1].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover2.jpg",
+        "received_image2.jpg",
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[2].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover2.jpg",
+        "received_image2.jpg",
+    ).await?;
+
+
+
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[0].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover3.jpg",
+        "received_image3.jpg",
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[1].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover3.jpg",
+        "received_image3.jpg",
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[2].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover3.jpg",
+        "received_image3.jpg",
+    ).await?;
+
+
+
+
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[0].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover4.jpg",
+        "received_image4.jpg",
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[1].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover4.jpg",
+        "received_image4.jpg",
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[2].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket,
+        "src/cover4.jpg",
+        "received_image4.jpg",
+    ).await?;
+
