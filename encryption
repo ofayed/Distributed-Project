@@ -148,3 +148,108 @@
         "received_image4.jpg",
     ).await?;
 
+
+
+
+async fn send_message_with_retransmission3(
+    message: u64,
+    destination: SocketAddr,
+    max_retransmissions: usize,
+    timeout: Duration,
+    socket: &UdpSocket,
+    image_path:&str,
+    dec_path:&str
+) -> Result<(), Box<dyn std::error::Error>> {
+    //let socket = UdpSocket::bind("127.0.0.1:1001").await?;
+    
+    let mut retransmissions = 0;
+    let mut flag =0;
+    loop {
+        // Send the message
+        let image_data = fs::read(image_path)?;
+       
+        let expected_image_size = image_data.len() as u64; // Get the size of the image
+    
+       
+        // Send the expected image size to the server
+        socket.send_to(&expected_image_size.to_ne_bytes(), destination).await?;
+        println!("Message sent to {}", destination);
+
+        // Wait for a response or a timeout
+        let mut buf = [0; 1024];
+        let result = tokio::select! {
+            res = socket.recv_from(&mut buf) => res,
+            _ = sleep(timeout) => Ok((0, SocketAddr::from(([0, 0, 0, 0], 0)))),
+        };
+
+        match result {
+            Ok((num_bytes, sender)) if num_bytes > 0 => {
+                        
+              /*   let mut buffer = [0; 1024];
+                let (num_bytes, src_addr) = socket.recv_from(&mut buffer).await?;
+                let received_message: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&buffer[0..num_bytes]);
+                println!("You received a message '{}'", received_message);*/
+                // Define the maximum size of each fragment
+                let max_fragment_size = 1024; // Adjust this according to your needs
+            
+                // Split the image data into smaller fragments and send them
+                for chunk in image_data.chunks(max_fragment_size) {
+                    print!("sent");
+                    socket.send_to(chunk,  destination).await?;
+                }
+            
+                println!("Image sent successfully!");
+            
+            
+                let mut buffer = vec![0; 1024]; // Adjust the buffer size to match the maximum fragment size
+            
+                let mut received_data = Vec::new(); // Store received fragments
+            
+                // Receive the expected image size
+                //let (bytes_received, _) = socket.recv_from(&mut buffer).await?;
+               // let expected_image_size = u64::from_ne_bytes(buffer[..bytes_received].try_into().unwrap());
+                let mut buf2 = [0; 1024];
+                let (num_bytes, crypt_addr) = socket.recv_from(&mut buf2).await.expect("Failed to receive data");
+                // Receive the expected image size
+                //let (bytes_received, _) = socket.recv_from(&mut buffer).await.expect("Failed to receive data");
+                let expected_image_size = u64::from_ne_bytes(buf2[..num_bytes].try_into().unwrap());
+                println!("Expected image size: {} bytes", expected_image_size);
+            
+                while let Ok(bytes) = socket.recv(&mut buffer).await {
+                    // Process the received fragment
+                    received_data.extend_from_slice(&buffer[..bytes]);
+                   
+                    // Check if the entire image has been received
+                    if received_data.len() as u64 == expected_image_size {
+                      
+                        // Save the received data as an image file
+                        fs::write(dec_path, &received_data)?;
+            
+                        println!("Received image and saved it as 'received_image.jpg'");
+                        break; // Exit the loop once the entire image is received
+                    }
+                   /* if(received_data.len() as u64 >=  expected_image_size - 10000)
+                    {
+                        fs::write("received_image.jpg", &received_data)?;
+            
+                        println!("Received most of the image and saved it as 'received_image.jpg'");
+                        break; // Exit the loop once the entire image is received
+
+                    } */
+                } 
+                break Ok(());
+            }
+                
+            
+            _ => {
+                println!("No response, retransmitting...");
+                retransmissions += 1;
+                if retransmissions >= max_retransmissions {
+                    break Ok(());
+                   //break Err("Max retransmissions reached".into());
+                }
+            }
+        }
+    }
+}
+
