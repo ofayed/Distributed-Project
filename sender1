@@ -1,0 +1,507 @@
+use std::io;
+use std::process::exit;
+use tokio::time::{sleep, Duration};
+use tokio::net::UdpSocket;
+use std::net::{SocketAddr, ToSocketAddrs};
+use std::process::Output;
+
+use image::{ImageBuffer, DynamicImage, Rgba};
+use steganography::encoder::Encoder;
+use steganography::decoder::Decoder;
+
+use std::fs;
+use std::convert::TryInto;
+
+
+
+async fn send_message_with_retransmission(
+    message: &str,
+    destination: SocketAddr,
+    max_retransmissions: usize,
+    timeout: Duration,
+    socket: &UdpSocket
+) -> Result<(), Box<dyn std::error::Error>> {
+    //let socket = UdpSocket::bind("127.0.0.1:1001").await?;
+    
+    let mut retransmissions = 0;
+    let mut flag =0;
+    loop {
+        // Send the message
+        socket.send_to(message.as_bytes(), destination).await?;
+        println!("Message sent to {}", destination);
+
+        // Wait for a response or a timeout
+        let mut buf = [0; 1024];
+        let result = tokio::select! {
+            res = socket.recv_from(&mut buf) => res,
+            _ = sleep(timeout) => Ok((0, SocketAddr::from(([0, 0, 0, 0], 0)))),
+        };
+
+        match result {
+            Ok((num_bytes, sender)) if num_bytes > 0 => {
+                println!("Received response from {}: {:?}", sender, String::from_utf8_lossy(&buf[..num_bytes]));
+                if String::from_utf8_lossy(&buf[..num_bytes]).trim().to_string() == "Name Registered".to_string() {
+                    flag = 1;
+                   
+                } else {
+                    println!("Enter Your Name ");
+                    let mut name = String::new();
+                    io::stdin().read_line(&mut name)?;
+                    socket.send_to(name.trim().as_bytes(), destination).await?;
+                }
+                break Ok(());
+            }
+            _ => {
+                println!("No response, retransmitting...");
+                retransmissions += 1;
+                if retransmissions >= max_retransmissions {
+                    break Ok(());
+                   //break Err("Max retransmissions reached".into());
+                }
+            }
+        }
+    }
+}
+
+
+async fn send_message_with_retransmission2(
+    message: &str,
+    destination: SocketAddr,
+    max_retransmissions: usize,
+    timeout: Duration,
+    socket: &UdpSocket
+) -> Result<(), Box<dyn std::error::Error>> {
+    //let socket = UdpSocket::bind("127.0.0.1:1001").await?;
+    
+    let mut retransmissions = 0;
+    let mut flag =0;
+    loop {
+        // Send the message
+        socket.send_to(message.as_bytes(), destination).await?;
+        println!("Message sent to {}", destination);
+
+        // Wait for a response or a timeout
+        let mut buf = [0; 1024];
+        let result = tokio::select! {
+            res = socket.recv_from(&mut buf) => res,
+            _ = sleep(timeout) => Ok((0, SocketAddr::from(([0, 0, 0, 0], 0)))),
+        };
+
+        match result {
+            Ok((num_bytes, sender)) if num_bytes > 0 => {
+                let mut flag = 0;
+                while flag == 0 {
+                println!("Enter Receiver's Name ");
+                let mut message = String::new();
+                io::stdin().read_line(&mut message)?;
+            
+                socket.send_to(message.trim().as_bytes(), destination).await?;
+               // println!("Message sent to {}: {}", correct_add, message);
+
+                let mut buffer = [0; 1024];
+                let (num_bytes, src_addr) = socket.recv_from(&mut buffer).await?;
+                let received_message: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&buffer[0..num_bytes]);
+                println!("You received a message '{}'", received_message);
+
+                if received_message.to_string() == "Name not found".to_string() {
+                    println!("Name not found, Try another name");
+                } else {
+                    let mut add = received_message.to_string();
+                    let dest_addr = add.as_str();
+                    println!("Name found at address '{}' ", dest_addr);
+                    //println!("Enter Message ");
+                    send_image_over_udp("received_image.jpg", dest_addr, &socket).await?;
+                    /*let mut m = String::new();
+                    io::stdin().read_line(&mut m)?;
+                    socket.send_to(m.trim().as_bytes(), dest_addr).await?;*/
+                    flag = 1;
+                }
+            }
+                break Ok(());
+            }
+            _ => {
+                println!("No response, retransmitting...");
+                retransmissions += 1;
+                if retransmissions >= max_retransmissions {
+                    break Ok(());
+                   //break Err("Max retransmissions reached".into());
+                }
+            }
+        }
+    }
+}
+
+
+
+
+async fn send_message_with_retransmission3(
+    message: u64,
+    destination: SocketAddr,
+    max_retransmissions: usize,
+    timeout: Duration,
+    socket: &UdpSocket
+) -> Result<(), Box<dyn std::error::Error>> {
+    //let socket = UdpSocket::bind("127.0.0.1:1001").await?;
+    
+    let mut retransmissions = 0;
+    let mut flag =0;
+    loop {
+        // Send the message
+        let image_data = fs::read("src/cover.jpg")?;
+        let expected_image_size = image_data.len() as u64; // Get the size of the image
+    
+       
+        // Send the expected image size to the server
+        socket.send_to(&expected_image_size.to_ne_bytes(), destination).await?;
+        println!("Message sent to {}", destination);
+
+        // Wait for a response or a timeout
+        let mut buf = [0; 1024];
+        let result = tokio::select! {
+            res = socket.recv_from(&mut buf) => res,
+            _ = sleep(timeout) => Ok((0, SocketAddr::from(([0, 0, 0, 0], 0)))),
+        };
+
+        match result {
+            Ok((num_bytes, sender)) if num_bytes > 0 => {
+                        
+              /*   let mut buffer = [0; 1024];
+                let (num_bytes, src_addr) = socket.recv_from(&mut buffer).await?;
+                let received_message: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&buffer[0..num_bytes]);
+                println!("You received a message '{}'", received_message);*/
+                // Define the maximum size of each fragment
+                let max_fragment_size = 1024; // Adjust this according to your needs
+            
+                // Split the image data into smaller fragments and send them
+                for chunk in image_data.chunks(max_fragment_size) {
+                    socket.send_to(chunk,  destination).await?;
+                }
+            
+                println!("Image sent successfully!");
+            
+            
+                let mut buffer = vec![0; 1024]; // Adjust the buffer size to match the maximum fragment size
+            
+                let mut received_data = Vec::new(); // Store received fragments
+            
+                // Receive the expected image size
+                //let (bytes_received, _) = socket.recv_from(&mut buffer).await?;
+               // let expected_image_size = u64::from_ne_bytes(buffer[..bytes_received].try_into().unwrap());
+                let mut buf2 = [0; 1024];
+                let (num_bytes, crypt_addr) = socket.recv_from(&mut buf2).await.expect("Failed to receive data");
+                // Receive the expected image size
+                //let (bytes_received, _) = socket.recv_from(&mut buffer).await.expect("Failed to receive data");
+                let expected_image_size = u64::from_ne_bytes(buf2[..num_bytes].try_into().unwrap());
+                println!("Expected image size: {} bytes", expected_image_size);
+            
+                while let Ok(bytes) = socket.recv(&mut buffer).await {
+                    // Process the received fragment
+                    received_data.extend_from_slice(&buffer[..bytes]);
+                   
+                    // Check if the entire image has been received
+                    if received_data.len() as u64 == expected_image_size {
+                      
+                        // Save the received data as an image file
+                        fs::write("received_image.jpg", &received_data)?;
+            
+                        println!("Received image and saved it as 'received_image.jpg'");
+                        break; // Exit the loop once the entire image is received
+                    }
+                   /* if(received_data.len() as u64 >=  expected_image_size - 10000)
+                    {
+                        fs::write("received_image.jpg", &received_data)?;
+            
+                        println!("Received most of the image and saved it as 'received_image.jpg'");
+                        break; // Exit the loop once the entire image is received
+
+                    } */
+                } 
+                break Ok(());
+            }
+                
+            
+            _ => {
+                println!("No response, retransmitting...");
+                retransmissions += 1;
+                if retransmissions >= max_retransmissions {
+                    break Ok(());
+                   //break Err("Max retransmissions reached".into());
+                }
+            }
+        }
+    }
+}
+
+
+
+async fn send_image_over_udp(
+    image_path: &str,
+    server_ip: &str,
+    socket: &UdpSocket,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Read the image file asynchronously
+    let image_data = fs::read(image_path)?;
+
+    // Get the size of the image
+    let expected_image_size = image_data.len() as u64;
+
+    // Send the expected image size to the server
+    socket.send_to(&expected_image_size.to_ne_bytes(), server_ip).await?;
+
+    // Define the maximum size of each fragment
+    let max_fragment_size = 1024; // Adjust this according to your needs
+
+    // Split the image data into smaller fragments and send them
+    for chunk in image_data.chunks(max_fragment_size) {
+        println!("sent");
+        socket.send_to(chunk, server_ip).await?;
+    }
+
+    println!("Image sent successfully!");
+
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a UDP socket bound to a local address
+    let socket = UdpSocket::bind("127.0.0.1:1028").await?;
+    let flag2 = 0;
+
+    // Destination address (IP and port) of the receiver
+    let direct_add: [&str; 3] = ["127.0.0.1:1002", "127.0.0.1:1012", "127.0.0.1:1022"];
+    let ask_add: [&str; 3] = ["127.0.0.1:1003", "127.0.0.1:1013", "127.0.0.1:1023"];
+    let crypt_add: [&str; 3] = ["127.0.0.1:1006", "127.0.0.1:1016", "127.0.0.1:1026"];
+    //let direct_addr[3] = "127.0.0.1:1002";
+    //let ask_addr = "127.0.0.1:1003";
+    let rec_addr = "127.0.0.1:1004";
+   // let crypt_addr = "127.0.0.1:1006";
+    let mut flag3 = 1;
+
+   // socket.send_to("register".as_bytes(), direct_addr).await?;
+   let destination: SocketAddr = "127.0.0.1:1002".parse()?;
+   let message = "Register";
+   let max_retransmissions = 0;
+   let timeout = Duration::from_secs(1); // Set the timeout to 5 seconds
+   send_message_with_retransmission(
+       message,
+       direct_add[0].parse().unwrap(),
+       max_retransmissions,
+       timeout,
+       &socket
+   ).await?;
+   send_message_with_retransmission(
+    message,
+    direct_add[1].parse().unwrap(),
+    max_retransmissions,
+    timeout,
+    &socket
+).await?;
+send_message_with_retransmission(
+    message,
+    direct_add[2].parse().unwrap(),
+    max_retransmissions,
+    timeout,
+    &socket
+).await?;
+/* 
+    while flag3 == 0 {
+       
+        let mut buffer = [0; 1024];
+        let (num_bytes, src_addr) = socket.recv_from(&mut buffer).await?;
+        let received_message: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&buffer[0..num_bytes]);
+        println!("You received a message '{}'", received_message);
+       
+        if received_message.trim().to_string() == "Name Registered".to_string() {
+            flag3 = 1;
+            break;
+        } else {
+            println!("Enter Your Name ");
+            let mut name = String::new();
+            io::stdin().read_line(&mut name)?;
+            socket.send_to(name.trim().as_bytes(), direct_addr).await?;
+        }
+    }*/
+
+    loop {
+        println!("Choose to 1. Send \n 2. Receive \n 3.Encrypt \n 4.Exit");
+        let mut choice: String = String::new();
+        io::stdin().read_line(&mut choice)?;
+        let c: i32 = choice.trim().parse()?;
+        if c == 1 {
+            /*let mut flag = 0;
+            while flag == 0 {
+                println!("Enter Receiver's Name ");
+                let mut message = String::new();
+                io::stdin().read_line(&mut message)?;
+                socket.send_to(message.trim().as_bytes(), ask_add[0]).await?;
+                socket.send_to(message.trim().as_bytes(), ask_add[1]).await?;
+                socket.send_to(message.trim().as_bytes(), ask_add[2]).await?;
+               
+               // println!("Message sent to {}: {}", correct_add, message);
+
+                let mut buffer = [0; 1024];
+                let (num_bytes, src_addr) = socket.recv_from(&mut buffer).await?;
+                let received_message: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&buffer[0..num_bytes]);
+                println!("You received a message '{}'", received_message);
+
+                if received_message.to_string() == "Name not found".to_string() {
+                    println!("Name not found, Try another name");
+                } else {
+                    let mut add = received_message.to_string();
+                    let dest_addr = add.as_str();
+                    println!("Name found at address '{}' ", dest_addr);
+                    //println!("Enter Message ");
+                    send_image_over_udp("received_image.jpg", dest_addr, &socket).await?;
+                    /*let mut m = String::new();
+                    io::stdin().read_line(&mut m)?;
+                    socket.send_to(m.trim().as_bytes(), dest_addr).await?;*/
+                    flag = 1;
+                }
+            }*/
+            send_message_with_retransmission2(
+                message,
+                ask_add[0].parse().unwrap(),
+                max_retransmissions,
+                timeout,
+                &socket
+            ).await?;
+            send_message_with_retransmission2(
+                message,
+                ask_add[1].parse().unwrap(),
+                max_retransmissions,
+                timeout,
+                &socket
+            ).await?;
+            send_message_with_retransmission2(
+                message,
+                ask_add[2].parse().unwrap(),
+                max_retransmissions,
+                timeout,
+                &socket
+            ).await?;
+
+        } else if c == 2 {
+            loop {let mut buffer = vec![0; 1024]; // Adjust the buffer size to match the maximum fragment size
+
+                let mut received_data = Vec::new(); // Store received fragments
+            
+                // Receive the expected image size
+                //let (bytes_received, _) = socket.recv_from(&mut buffer).await?;
+               // let expected_image_size = u64::from_ne_bytes(buffer[..bytes_received].try_into().unwrap());
+                let mut buf2 = [0; 1024];
+                let (num_bytes, crypt_addr) = socket.recv_from(&mut buf2).await.expect("Failed to receive data");
+                // Receive the expected image size
+                //let (bytes_received, _) = socket.recv_from(&mut buffer).await.expect("Failed to receive data");
+                let expected_image_size = u64::from_ne_bytes(buf2[..num_bytes].try_into().unwrap());
+                println!("Expected image size: {} bytes", expected_image_size);
+            
+                while let Ok(bytes) = socket.recv(&mut buffer).await {
+                    // Process the received fragment
+                    received_data.extend_from_slice(&buffer[..bytes]);
+                   
+                    // Check if the entire image has been received
+                    if received_data.len() as u64 == expected_image_size {
+                      
+                        // Save the received data as an image file
+                        fs::write("received_image.jpg", &received_data)?;
+            
+                        println!("Received image and saved it as 'received_image.jpg'");
+                        break; // Exit the loop once the entire image is received
+                    }
+                } 
+                println!("Do you want to exit receiving state?");
+                println!("Press 2 to exit receiving halt, press any button to remain");
+                let mut x = String::new();
+                io::stdin().read_line(&mut x)?;
+                let x2: i8 = x.trim().parse()?;
+                if x2 == 2 {
+                    break;
+                }
+            }
+        
+        } 
+        else if c == 3 {
+           
+    // Read the image file into a byte vector
+    let image_data = fs::read("src/cover.jpg")?;
+    let expected_image_size = image_data.len() as u64; // Get the size of the image
+
+    // Create a UDP socket
+    
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[0].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[1].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket
+    ).await?;
+    send_message_with_retransmission3(
+        expected_image_size,
+        crypt_add[2].parse().unwrap(),
+        max_retransmissions,
+        timeout,
+        &socket
+    ).await?;
+
+    // Send the expected image size to the server
+    /*socket.send_to(&expected_image_size.to_ne_bytes(), crypt_add[0]).await?;
+    socket.send_to(&expected_image_size.to_ne_bytes(), crypt_add[1]).await?;
+    socket.send_to(&expected_image_size.to_ne_bytes(), crypt_add[2]).await?;
+
+    let mut buffer = [0; 1024];
+    let (num_bytes, src_addr) = socket.recv_from(&mut buffer).await?;
+    let received_message: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&buffer[0..num_bytes]);
+    println!("You received a message '{}'", received_message);
+    // Define the maximum size of each fragment
+    let max_fragment_size = 1024; // Adjust this according to your needs
+
+    // Split the image data into smaller fragments and send them
+    for chunk in image_data.chunks(max_fragment_size) {
+        socket.send_to(chunk,  src_addr).await?;
+    }
+
+    println!("Image sent successfully!");
+
+
+    let mut buffer = vec![0; 1024]; // Adjust the buffer size to match the maximum fragment size
+
+    let mut received_data = Vec::new(); // Store received fragments
+
+    // Receive the expected image size
+    //let (bytes_received, _) = socket.recv_from(&mut buffer).await?;
+   // let expected_image_size = u64::from_ne_bytes(buffer[..bytes_received].try_into().unwrap());
+    let mut buf2 = [0; 1024];
+    let (num_bytes, crypt_addr) = socket.recv_from(&mut buf2).await.expect("Failed to receive data");
+    // Receive the expected image size
+    //let (bytes_received, _) = socket.recv_from(&mut buffer).await.expect("Failed to receive data");
+    let expected_image_size = u64::from_ne_bytes(buf2[..num_bytes].try_into().unwrap());
+    println!("Expected image size: {} bytes", expected_image_size);
+
+    while let Ok(bytes) = socket.recv(&mut buffer).await {
+        // Process the received fragment
+        received_data.extend_from_slice(&buffer[..bytes]);
+       
+        // Check if the entire image has been received
+        if received_data.len() as u64 == expected_image_size {
+          
+            // Save the received data as an image file
+            fs::write("received_image.jpg", &received_data)?;
+
+            println!("Received image and saved it as 'received_image.jpg'");
+            break; // Exit the loop once the entire image is received
+        }
+    } */
+        } 
+        else if c == 4 {
+            exit(1);
+        }
+    }
+}
