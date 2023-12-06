@@ -1,6 +1,5 @@
 use tokio::net::UdpSocket;
 use std::net::{SocketAddr, ToSocketAddrs};
-use std::str::FromStr;
 use std::vec;
 use std::collections::HashMap;
 use std::process::exit;
@@ -14,14 +13,13 @@ use std::mem;
 use image::{ImageBuffer, DynamicImage, Rgba};
 use steganography::encoder::Encoder;
 use steganography::decoder::Decoder;
-use std::time::Duration;
+use std::thread;
 use std::fs;
 use std::convert::TryInto;
 use tokio::io;
-use std::thread;
+use std::time::Duration;
 use std::io::prelude::*;
 use std::fs::File;
-
 
 async fn read_image_as_bytes(image_path: &str) -> Result<Vec<u8>, io::Error> {
     tokio::fs::read(image_path).await
@@ -78,14 +76,13 @@ fn write_file( name: &str, socket_addr: &SocketAddr) -> Result<(), Box<dyn Error
 async fn send_counter(counter : i32, socket:&UdpSocket)  -> Result<(), Box<dyn std::error::Error>>
 {
    // let socket = UdpSocket::bind("127.0.0.1:1017").await.expect("Failed to bind to address");
-    socket.send_to(counter.to_string().as_bytes(), "127.0.0.1:1027".to_string()).await.expect("Failed to send response"); 
+    socket.send_to(counter.to_string().as_bytes(), "127.0.0.1:1017".to_string()).await.expect("Failed to send response"); 
 
     socket.send_to(counter.to_string().as_bytes(), "127.0.0.1:1007".to_string()).await.expect("Failed to send response");
 
     Ok(())
 
 }
-
 
 async fn send_image_over_udp(
     image_path: &str,
@@ -118,7 +115,7 @@ async fn send_image_over_udp(
 static mut servers: i32 = 3;
 static mut counter1: i32 =0;
 static mut request_num:i32=0;
-static mut turn:i32 = 1;
+static mut turn:i32 = 2;
 static  mut flag1:i32=0;
 static mut flag2:i32=0;
 static mut flag3:i32 = 0;
@@ -127,11 +124,11 @@ static mut down_flag:i32 = 0;
  async fn handle_udp_socket(bind_address: &str) {
     let socket = UdpSocket::bind(bind_address).await.expect("Failed to bind to address");
     println!("Bound to {}", bind_address);
-
+  
     let mut buffer_Size=0;
-    
+
     //let mut servers =3;
- 
+  
     let mut users_data:HashMap<String, SocketAddr> = HashMap::new();
     
     // Initialize a queue to buffer incoming requests
@@ -153,7 +150,7 @@ static mut down_flag:i32 = 0;
         // Process the received data based on the receiving port
         match bind_address {
            
-            "127.0.0.1:1012" => {
+            "127.0.0.1:1022" => {
              
             let mut buf = [0; 1024];
             let (num_bytes, sender) = socket.recv_from(&mut buf).await.expect("Failed to receive data");
@@ -162,9 +159,13 @@ static mut down_flag:i32 = 0;
             let ip = String::from_utf8_lossy(data).to_string(); // Convert the data to a String
            
             println!("Received message: {}", ip);
-               
+        
+           
             let add = ip.parse::<SocketAddr>().expect("Failed to parse address");
-
+           
+              
+           
+          
             let mut flagg=0;
          
             socket.send_to("ACK".as_bytes(), add).await.expect("Failed to send response");
@@ -202,9 +203,9 @@ static mut down_flag:i32 = 0;
                              write_file(&data_string, &sender);
                              //let socket2 = UdpSocket::bind("127.0.0.1:1019").await.expect("Failed to bind to address");
                              read_file(&mut users_data);
-                             socket.send_to(data_string.as_bytes(), "127.0.0.1:1025".to_string()).await.expect("Failed to send response");
+                             socket.send_to(data_string.as_bytes(), "127.0.0.1:1015".to_string()).await.expect("Failed to send response");
     
-                             socket.send_to(sender.to_string().as_bytes(), "127.0.0.1:1025".to_string()).await.expect("Failed to send response");
+                             socket.send_to(sender.to_string().as_bytes(), "127.0.0.1:1015".to_string()).await.expect("Failed to send response");
     
                          
                              socket.send_to(data_string.as_bytes(), "127.0.0.1:1005".to_string()).await.expect("Failed to send response");
@@ -229,9 +230,9 @@ static mut down_flag:i32 = 0;
                     write_file(&data_string, &sender);
                     //let socket2 = UdpSocket::bind("127.0.0.1:1009").await.expect("Failed to bind to address");
                     read_file(&mut users_data);
-                    socket.send_to(data_string.as_bytes(), "127.0.0.1:1025".to_string()).await.expect("Failed to send response");
+                    socket.send_to(data_string.as_bytes(), "127.0.0.1:1015".to_string()).await.expect("Failed to send response");
     
-                    socket.send_to(sender.to_string().as_bytes(), "127.0.0.1:1025".to_string()).await.expect("Failed to send response");
+                    socket.send_to(sender.to_string().as_bytes(), "127.0.0.1:1015".to_string()).await.expect("Failed to send response");
     
                          
                     socket.send_to(data_string.as_bytes(), "127.0.0.1:1005".to_string()).await.expect("Failed to send response");
@@ -244,8 +245,8 @@ static mut down_flag:i32 = 0;
             flag1=0;
    
         }
-            "127.0.0.1:1013" => {
-            
+            "127.0.0.1:1023" => {
+        
                 let mut buf = [0; 1024];
                 let (num_bytes, sender) = socket.recv_from(&mut buf).await.expect("Failed to receive data");
         
@@ -256,15 +257,7 @@ static mut down_flag:i32 = 0;
                 
                 socket.send_to("ACK".to_string().as_bytes(), add).await.expect("Failed to send response");
                 
-                //let mut received_data = Vec::new(); // Store received fragments
-          
-         
-                //let mut users_data:HashMap<String, SocketAddr> = HashMap::new(); 
-                 
-                
-                //let mut users_data:HashMap<String, SocketAddr> = HashMap::new(); 
-                //read_file(&mut users_data);
-               // let add =Name_Search(&received_message.to_string(), &addresses);
+       
                let mut flag =0;
           
                read_file(&mut users_data);
@@ -289,11 +282,12 @@ static mut down_flag:i32 = 0;
                 }
                }
              
+             
          flag2=0;
         }
               
             
-            "127.0.0.1:1014" => {
+            "127.0.0.1:1024" => {
                 let mut buf = [0; 1024];
                 let (num_bytes, sender) = socket.recv_from(&mut buf).await.expect("Failed to receive data");
                 let data = &buf[..num_bytes];
@@ -316,12 +310,11 @@ static mut down_flag:i32 = 0;
                   
                      down_flag = 1;
                     socket.send_to("i am down".to_string().as_bytes(), "127.0.0.1:1004").await.expect("Failed to send response");
-                    socket.send_to("i am down".to_string().as_bytes(), "127.0.0.1:1024").await.expect("Failed to send response");
+                    socket.send_to("i am down".to_string().as_bytes(), "127.0.0.1:1014").await.expect("Failed to send response");
                     let sleep_duration = Duration::from_secs(15);
                     thread::sleep(sleep_duration);
                     socket.send_to("i am back".to_string().as_bytes(), "127.0.0.1:1004").await.expect("Failed to send response");
-                    socket.send_to("i am back".to_string().as_bytes(), "127.0.0.1:1024").await.expect("Failed to send response");
-                    unsafe{turn = 2;}
+                    socket.send_to("i am back".to_string().as_bytes(), "127.0.0.1:1014").await.expect("Failed to send response");
                     unsafe{counter1 =0;}
                     down_flag = 0;
                     let mut file = File::create("users.csv").expect(" ");
@@ -350,22 +343,21 @@ static mut down_flag:i32 = 0;
                 }
                 if( mess== "i am down")
                 {
+                    println!("another server is down");
                     unsafe{ servers=2;}
                     unsafe{counter1 =0;}
                     //unsafe{ servers=2;}
-                    let temp_sender = "127.0.0.1:1004".to_string();
-                    let sock_add = temp_sender.parse::<SocketAddr>().unwrap();
-
-                    if(sender == sock_add)
-                    {
-                        unsafe{turn = 0;}
-                    }
+                  
+                  unsafe{turn -=1;}
+                    
+                    println!(" my turn: {} ", turn);
                     //socket.send_to("i am down".to_string().as_bytes(), "127.0.0.1:1014").await.expect("Failed to send response");
                     //socket.send_to("i am down".to_string().as_bytes(), "127.0.0.1:1024").await.expect("Failed to send response");
-                    println!(" my turn: {} ", turn);
+
                 }
                 if( mess== "i am back")
                 {
+                    println!("another server is back");
                     unsafe{ servers=3;}
                     unsafe{counter1 =0;}
                     println!(" my turn: {} ", turn);
@@ -393,7 +385,7 @@ static mut down_flag:i32 = 0;
                 
                 
             }
-            "127.0.0.1:1015" => {
+            "127.0.0.1:1025" => {
                 let mut buf = [0; 1024];
                 let (num_bytes, sender) = socket.recv_from(&mut buf).await.expect("Failed to receive data");
                 let data = &buf[..num_bytes];
@@ -408,7 +400,7 @@ static mut down_flag:i32 = 0;
                 read_file(&mut users_data);
                 
             }
-            "127.0.0.1:1016" => {
+            "127.0.0.1:1026" => {
                 let mut buf = [0; 1024];
                 let (num_bytes, sender) = socket.recv_from(&mut buf).await.expect("Failed to receive data");
         
@@ -478,7 +470,6 @@ static mut down_flag:i32 = 0;
                         let encoded_image = steganography::util::file_as_image_buffer(outputPath2);
                      
                         let file_path = "output.png";
-                        print!("reached");
                         send_image_over_udp(file_path,&sender.to_string(),&socket).await.expect("msg");
                         // Read the file asynchronously
                         /*
@@ -507,8 +498,9 @@ static mut down_flag:i32 = 0;
          
         
             
+            
            
-        "127.0.0.1:1017" => {
+        "127.0.0.1:1027" => {
             let mut buf = [0; 1024];
 
             let (num_bytes, sender) = socket.recv_from(&mut buf).await.expect("Failed to receive data");
@@ -522,34 +514,33 @@ static mut down_flag:i32 = 0;
             
         }
 
-        "127.0.0.1:1018"=> {
+        "127.0.0.1:1028"=> {
             let mut buf = [0; 1024];
             let (num_bytes, sender) = socket.recv_from(&mut buf).await.expect("Failed to receive data");
             let data = &buf[..num_bytes];
             let data_string = String::from_utf8_lossy(data).to_string(); // Convert the data to a String
             request_num+=1;
-            println!("requests = {}",request_num );
             let mut mes = data_string.clone();
             let mut addr_str = sender.to_string();
             unsafe{ counter1 = counter1 % servers;
-            println! ("counter  {} ", counter1);}
+                println! ("counter  {} ", counter1);}
             if(counter1 == turn && down_flag == 0){
             counter1+=1;
             send_counter(counter1, &socket).await.expect("could not update counter");            //If the server is not busy processing another request, send the data immediately
             if flag1 == 0 && data_string == "Register"{ 
                 socket.send_to("ACK".as_bytes(), sender).await.expect("Failed to send response");
-                socket.send_to(addr_str.as_bytes(), "127.0.0.1:1012".to_string()).await.expect("Failed to send response");;
+                socket.send_to(addr_str.as_bytes(), "127.0.0.1:1022".to_string()).await.expect("Failed to send response");;
                 flag1 = 1;
                 println!("sent to register {} ", addr_str);
             }
             else if flag2 == 0 && data_string == "Ask"{ 
                 socket.send_to("ACK".as_bytes(), sender).await.expect("Failed to send response");
-                socket.send_to(addr_str.as_bytes(), "127.0.0.1:1013".to_string()).await.expect("Failed to send response");;
+                socket.send_to(addr_str.as_bytes(), "127.0.0.1:1023".to_string()).await.expect("Failed to send response");;
                 flag2 = 1;
             }
             else if flag3 == 0 && data_string == "Encrypt"{ 
                 socket.send_to("ACK".as_bytes(), sender).await.expect("Failed to send response");
-                socket.send_to(addr_str.as_bytes(), "127.0.0.1:1016".to_string()).await.expect("Failed to send response");;
+                socket.send_to(addr_str.as_bytes(), "127.0.0.1:1026".to_string()).await.expect("Failed to send response");;
                 flag3 = 1; //unsetting where??
             }
             else{ // Otherwise, push the data to the queue
@@ -560,12 +551,12 @@ static mut down_flag:i32 = 0;
             if mes == "Available"{ //server sent it is available
                 let addr: &str = addr_str.as_str();
                 match addr {
-                    "127.0.0.1:1012" => { //Register
+                    "127.0.0.1:1022" => { //Register
                         let mut i = 0;
                         let mut handled_once = 0;
                         while i != request_queue.len() {
                             if request_queue[i].0.as_str() == "Register" {
-                                socket.send_to(request_queue[i].1.as_bytes(), "127.0.0.1:1012".to_string()).await.expect("Failed to send response");;
+                                socket.send_to(request_queue[i].1.as_bytes(), "127.0.0.1:1022".to_string()).await.expect("Failed to send response");;
                                 request_queue.remove(i);
                                 handled_once = 1;
                                 break;
@@ -579,12 +570,12 @@ static mut down_flag:i32 = 0;
                         }
                     }
 
-                    "127.0.0.1:1013" => { //Ask
+                    "127.0.0.1:1023" => { //Ask
                         let mut i = 0;
                         let mut handled_once_buf2 = 0;
                         while i != request_queue.len() {
                             if request_queue[i].0.as_str() == "Ask" {
-                                socket.send_to(request_queue[i].1.as_bytes(), "127.0.0.1:1013".to_string()).await.expect("Failed to send response");;
+                                socket.send_to(request_queue[i].1.as_bytes(), "127.0.0.1:1023".to_string()).await.expect("Failed to send response");;
                                 request_queue.remove(i);
                                 handled_once_buf2 = 1;
                                 break;
@@ -596,12 +587,12 @@ static mut down_flag:i32 = 0;
                             flag2 = 0;
                         }
                     }
-                    "127.0.0.1:1016" => { //Encrypt
+                    "127.0.0.1:1026" => { //Encrypt
                         let mut i = 0;
                         let mut handled_once_buf3 = 0;
                         while i != request_queue.len() {
                             if request_queue[i].0.as_str() == "Encrypt" {
-                                socket.send_to(request_queue[i].1.as_bytes(), "127.0.0.1:1016".to_string()).await.expect("Failed to send response");;
+                                socket.send_to(request_queue[i].1.as_bytes(), "127.0.0.1:1026".to_string()).await.expect("Failed to send response");;
                                 request_queue.remove(i);
                                 handled_once_buf3 = 1;
                                 break;
@@ -653,23 +644,22 @@ async fn main() {
     let mut buf = [0; 1024];
 */
    let mut counter =0;
-   //let mut turn =0;
+  // let mut turn =0;
 
     
-    let ports_to_bind = vec!["127.0.0.1:1012","127.0.0.1:1013","127.0.0.1:1014","127.0.0.1:1015","127.0.0.1:1016","127.0.0.1:1017","127.0.0.1:1018" ];
+    let ports_to_bind = vec!["127.0.0.1:1022","127.0.0.1:1023","127.0.0.1:1024","127.0.0.1:1025","127.0.0.1:1026","127.0.0.1:1027","127.0.0.1:1028" ];
     //let mut Namedirectory: Vec<String> = vec![];
     //let mut Add_directory: Vec<SocketAddr> = vec![];
   
     let mut handles = vec![];
 
     for &bind_address in &ports_to_bind {
-        
-
+  
 
         counter = counter+1;
     let counter = counter %3;
 
-       // println!(" I handled This as the counter is: {}", counter);
+        //println!(" I handled This as the counter is: {}", counter);
         let handle = tokio::spawn(handle_udp_socket(bind_address));
         handles.push(handle);
     
